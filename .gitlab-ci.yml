@@ -1,0 +1,10 @@
+image: mcr.microsoft.com/dotnet/sdk:9.0
+
+stages:
+  - test
+
+build:
+  stage: test
+  script:
+    - dotnet --version
+    - echo "Runner is ready"
