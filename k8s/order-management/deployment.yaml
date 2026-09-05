@@ -21,7 +21,7 @@ spec:
 
       containers:
         - name: order-management-api
-          image: nexuss.mahbod.com:8082/order-management/order-management-api:6b16fb74
+          image: nexuss.mahbod.com:8082/order-management/order-management-api:2bdf9278
 
           ports:
             - containerPort: 5000
