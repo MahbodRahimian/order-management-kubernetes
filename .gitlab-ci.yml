@@ -38,6 +38,7 @@ docker_build_push:
 
   script:
     - docker --version
+    - docker info | grep -A10 -i "Insecure Registries"
     - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
     - docker build -f src/OrderManagement.API/Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" .
     - docker push "$IMAGE_NAME:$IMAGE_TAG"
