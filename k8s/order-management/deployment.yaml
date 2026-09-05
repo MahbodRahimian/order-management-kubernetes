@@ -31,6 +31,12 @@ spec:
             - name: ASPNETCORE_URLS
               value: "http://+:5000"
 
+            - name: ConnectionStrings__OrderManagement
+              valueFrom:
+                secretKeyRef:
+                  name: order-management-db-secret
+                  key: ConnectionStrings__OrderManagement
+
           resources:
             requests:
               cpu: 100m
