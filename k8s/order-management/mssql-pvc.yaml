@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mssql-pvc
+  namespace: order-management
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  storageClassName: mssql-local
+
+  resources:
+    requests:
+      storage: 50Gi
