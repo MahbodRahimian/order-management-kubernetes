@@ -1,3 +1,4 @@
+```yaml
 cache:
   key: "nuget-$CI_COMMIT_REF_SLUG"
   paths:
@@ -14,6 +15,7 @@ variables:
 
   ORDER_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/order-management-api"
   USER_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/usermanagement-api"
+  FINANCIAL_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/financial-api"
 
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
@@ -42,6 +44,22 @@ build_usermanagement_api:
     - dotnet --version
     - dotnet restore src/UserManagement.API/UserManagement.API.csproj
     - dotnet build src/UserManagement.API/UserManagement.API.csproj --no-restore --configuration Release
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+
+
+build_financial_api:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+
+  script:
+    - dotnet --version
+    - dotnet restore src/Financial.API/Financial.API.csproj
+    - dotnet build src/Financial.API/Financial.API.csproj --no-restore --configuration Release
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -83,37 +101,76 @@ docker_build_push_usermanagement:
       when: on_success
 
 
+docker_build_push_financial:
+  stage: docker
+  image: docker:27-cli
+
+  script:
+    - docker --version
+    - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
+    - docker build -f src/Financial.API/Dockerfile -t "$FINANCIAL_IMAGE_NAME:$IMAGE_TAG" src/Financial.API
+    - docker push "$FINANCIAL_IMAGE_NAME:$IMAGE_TAG"
+    - 'echo "Image pushed: ${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"'
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+
+
 update_kubernetes_manifests:
   stage: docker
+
   image: docker:27-cli
 
   needs:
     - docker_build_push_ordermanagement
     - docker_build_push_usermanagement
+    - docker_build_push_financial
 
   script:
     - apk add --no-cache curl yq
     - yq --version
+
     - export GITLAB_API="http://gitlab.mahbod.com:8080/api/v4"
     - export PROJECT="mahbod1%2Forder-management"
+
     - export ORDER_FILE="k8s%2Forder-management%2Fdeployment.yaml"
     - export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"
+    - export FINANCIAL_FILE="k8s%2Ffinancial%2Fdeployment.yaml"
+
     - export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"
     - export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"
+    - export FINANCIAL_IMAGE="${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"
+
     - 'echo "OrderManagement image: $ORDER_IMAGE"'
     - 'echo "UserManagement image: $USER_IMAGE"'
+    - 'echo "Financial image: $FINANCIAL_IMAGE"'
+
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE?ref=main" -o /tmp/order-response.json'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE?ref=main" -o /tmp/user-response.json'
+    - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$FINANCIAL_FILE?ref=main" -o /tmp/financial-response.json'
+
     - 'cat /tmp/order-response.json | yq -r ".content" | base64 -d > /tmp/order-deployment.yaml'
     - 'cat /tmp/user-response.json | yq -r ".content" | base64 -d > /tmp/user-deployment.yaml'
+    - 'cat /tmp/financial-response.json | yq -r ".content" | base64 -d > /tmp/financial-deployment.yaml'
+
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(ORDER_IMAGE)" /tmp/order-deployment.yaml'
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(USER_IMAGE)" /tmp/user-deployment.yaml'
+    - 'yq -i ".spec.template.spec.containers[0].image = strenv(FINANCIAL_IMAGE)" /tmp/financial-deployment.yaml'
+
     - 'grep "image:" /tmp/order-deployment.yaml'
     - 'grep "image:" /tmp/user-deployment.yaml'
+    - 'grep "image:" /tmp/financial-deployment.yaml'
+
     - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update OrderManagement image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/order-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE"'
+
     - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update UserManagement image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/user-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE"'
+
+    - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update Financial image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/financial-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$FINANCIAL_FILE"'
+
     - echo "Kubernetes manifests updated successfully."
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
+```
