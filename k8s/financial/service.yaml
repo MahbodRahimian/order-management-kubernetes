@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: financial-api
+  namespace: financial
+spec:
+  type: ClusterIP
+  selector:
+    app: financial-api
+  ports:
+    - port: 80
+      targetPort: 5000
+      protocol: TCP
