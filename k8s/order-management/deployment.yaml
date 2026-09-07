@@ -5,38 +5,30 @@ metadata:
   namespace: order-management
 spec:
   replicas: 1
-
   selector:
     matchLabels:
       app: order-management-api
-
   template:
     metadata:
       labels:
         app: order-management-api
-
     spec:
       imagePullSecrets:
         - name: nexus-registry
-
       containers:
         - name: order-management-api
-          image: nexuss.mahbod.com:8082/order-management/order-management-api:2bdf9278
-
+          image: nexuss.mahbod.com:8082/order-management/order-management-api:668f8a2b
           ports:
             - containerPort: 5000
               protocol: TCP
-
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:5000"
-
             - name: ConnectionStrings__OrderManagement
               valueFrom:
                 secretKeyRef:
                   name: order-management-db-secret
                   key: ConnectionStrings__OrderManagement
-
           resources:
             requests:
               cpu: 100m
@@ -44,14 +36,12 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 5
             periodSeconds: 10
-
           livenessProbe:
             httpGet:
               path: /health
