@@ -5,42 +5,34 @@ metadata:
   namespace: silo
 spec:
   replicas: 1
-
   selector:
     matchLabels:
       app: silo-api
-
   template:
     metadata:
       labels:
         app: silo-api
-
     spec:
       imagePullSecrets:
         - name: nexus-registry
-
       containers:
         - name: silo-api
-          image: nexuss.mahbod.com:8082/order-management/silo-api:latest
+          image: nexuss.mahbod.com:8082/order-management/silo-api:9e77add5
           imagePullPolicy: Always
-
           ports:
             - containerPort: 5000
-
           env:
             - name: ConnectionStrings__Silo
               valueFrom:
                 secretKeyRef:
                   name: silo-db-secret
                   key: ConnectionStrings__Silo
-
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
-
           livenessProbe:
             httpGet:
               path: /health
