@@ -16,6 +16,7 @@ variables:
   USER_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/usermanagement-api"
   FINANCIAL_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/financial-api"
   SILO_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/silo-api"
+  DISPATCHER_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/dispatcher-api"
 
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
@@ -76,6 +77,22 @@ build_silo_api:
     - dotnet --version
     - dotnet restore src/Silo.API/Silo.API.csproj
     - dotnet build src/Silo.API/Silo.API.csproj --no-restore --configuration Release
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+
+
+build_dispatcher_api:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+
+  script:
+    - dotnet --version
+    - dotnet restore src/Dispatcher.API/Dispatcher.API.csproj
+    - dotnet build src/Dispatcher.API/Dispatcher.API.csproj --no-restore --configuration Release
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -149,6 +166,22 @@ docker_build_push_silo:
       when: on_success
 
 
+docker_build_push_dispatcher:
+  stage: docker
+  image: docker:27-cli
+
+  script:
+    - docker --version
+    - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
+    - docker build -f src/Dispatcher.API/Dockerfile -t "$DISPATCHER_IMAGE_NAME:$IMAGE_TAG" .
+    - docker push "$DISPATCHER_IMAGE_NAME:$IMAGE_TAG"
+    - 'echo "Image pushed: ${DISPATCHER_IMAGE_NAME}:${IMAGE_TAG}"'
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+
+
 update_kubernetes_manifests:
   stage: docker
 
@@ -159,6 +192,7 @@ update_kubernetes_manifests:
     - docker_build_push_usermanagement
     - docker_build_push_financial
     - docker_build_push_silo
+    - docker_build_push_dispatcher
 
   script:
     - apk add --no-cache curl yq
@@ -171,36 +205,43 @@ update_kubernetes_manifests:
     - export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"
     - export FINANCIAL_FILE="k8s%2Ffinancial%2Fdeployment.yaml"
     - export SILO_FILE="k8s%2Fsilo%2Fdeployment.yaml"
+    - export DISPATCHER_FILE="k8s%2Fdispatcher%2Fdeployment.yaml"
 
     - export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"
     - export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"
     - export FINANCIAL_IMAGE="${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"
     - export SILO_IMAGE="${SILO_IMAGE_NAME}:${IMAGE_TAG}"
+    - export DISPATCHER_IMAGE="${DISPATCHER_IMAGE_NAME}:${IMAGE_TAG}"
 
     - 'echo "OrderManagement image: $ORDER_IMAGE"'
     - 'echo "UserManagement image: $USER_IMAGE"'
     - 'echo "Financial image: $FINANCIAL_IMAGE"'
     - 'echo "Silo image: $SILO_IMAGE"'
+    - 'echo "Dispatcher image: $DISPATCHER_IMAGE"'
 
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE?ref=main" -o /tmp/order-response.json'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE?ref=main" -o /tmp/user-response.json'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$FINANCIAL_FILE?ref=main" -o /tmp/financial-response.json'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$SILO_FILE?ref=main" -o /tmp/silo-response.json'
+    - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$DISPATCHER_FILE?ref=main" -o /tmp/dispatcher-response.json'
 
     - 'cat /tmp/order-response.json | yq -r ".content" | base64 -d > /tmp/order-deployment.yaml'
     - 'cat /tmp/user-response.json | yq -r ".content" | base64 -d > /tmp/user-deployment.yaml'
     - 'cat /tmp/financial-response.json | yq -r ".content" | base64 -d > /tmp/financial-deployment.yaml'
     - 'cat /tmp/silo-response.json | yq -r ".content" | base64 -d > /tmp/silo-deployment.yaml'
+    - 'cat /tmp/dispatcher-response.json | yq -r ".content" | base64 -d > /tmp/dispatcher-deployment.yaml'
 
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(ORDER_IMAGE)" /tmp/order-deployment.yaml'
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(USER_IMAGE)" /tmp/user-deployment.yaml'
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(FINANCIAL_IMAGE)" /tmp/financial-deployment.yaml'
     - 'yq -i ".spec.template.spec.containers[0].image = strenv(SILO_IMAGE)" /tmp/silo-deployment.yaml'
+    - 'yq -i ".spec.template.spec.containers[0].image = strenv(DISPATCHER_IMAGE)" /tmp/dispatcher-deployment.yaml'
 
     - 'grep "image:" /tmp/order-deployment.yaml'
     - 'grep "image:" /tmp/user-deployment.yaml'
     - 'grep "image:" /tmp/financial-deployment.yaml'
     - 'grep "image:" /tmp/silo-deployment.yaml'
+    - 'grep "image:" /tmp/dispatcher-deployment.yaml'
 
     - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update OrderManagement image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/order-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE"'
 
@@ -210,8 +251,9 @@ update_kubernetes_manifests:
 
     - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update Silo image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/silo-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$SILO_FILE"'
 
+    - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update Dispatcher image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/dispatcher-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$DISPATCHER_FILE"'
+
     - echo "Kubernetes manifests updated successfully."
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-      when: on_success
