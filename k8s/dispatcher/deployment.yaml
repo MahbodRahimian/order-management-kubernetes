@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatcher-api
+  namespace: dispatcher
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: dispatcher-api
+
+  template:
+    metadata:
+      labels:
+        app: dispatcher-api
+
+    spec:
+      imagePullSecrets:
+        - name: nexus-registry
+
+      containers:
+        - name: dispatcher-api
+          image: nexuss.mahbod.com:8082/order-management/dispatcher-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: ConnectionStrings__Dispatcher
+              valueFrom:
+                secretKeyRef:
+                  name: dispatcher-db-secret
+                  key: ConnectionStrings__Dispatcher
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 20
