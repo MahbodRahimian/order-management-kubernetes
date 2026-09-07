@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: silo-api
+  namespace: silo
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: silo-api
+
+  template:
+    metadata:
+      labels:
+        app: silo-api
+
+    spec:
+      imagePullSecrets:
+        - name: nexus-registry
+
+      containers:
+        - name: silo-api
+          image: nexuss.mahbod.com:8082/order-management/silo-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 20
