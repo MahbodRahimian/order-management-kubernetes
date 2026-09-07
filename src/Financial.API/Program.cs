@@ -1,20 +1,17 @@
-using Microsoft.Data.SqlClient;
-
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString =
-    builder.Configuration.GetConnectionString("Financial");
-
-builder.Services.AddSingleton(new FinancialDbConnection(connectionString!));
-
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+var connectionString =
+    builder.Configuration.GetConnectionString("Financial")
+    ?? throw new InvalidOperationException(
+        "Connection string 'Financial' is not configured.");
 
-app.Urls.Add("http://0.0.0.0:5000");
+builder.Services.AddSingleton(new FinancialDbConnection(connectionString));
+
+var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
