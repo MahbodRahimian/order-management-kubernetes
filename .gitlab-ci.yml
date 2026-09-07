@@ -107,7 +107,7 @@ docker_build_push_financial:
   script:
     - docker --version
     - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
-    - docker build -f src/Financial.API/Dockerfile -t "$FINANCIAL_IMAGE_NAME:$IMAGE_TAG" src/Financial.API
+    - docker build -f src/Financial.API/Dockerfile -t "$FINANCIAL_IMAGE_NAME:$IMAGE_TAG" .
     - docker push "$FINANCIAL_IMAGE_NAME:$IMAGE_TAG"
     - 'echo "Image pushed: ${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"'
 
