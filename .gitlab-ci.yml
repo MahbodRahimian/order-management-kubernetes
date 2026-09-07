@@ -94,77 +94,24 @@ update_kubernetes_manifests:
   script:
     - apk add --no-cache curl yq
     - yq --version
-    - curl --version
-
     - export GITLAB_API="http://gitlab.mahbod.com:8080/api/v4"
     - export PROJECT="mahbod1%2Forder-management"
     - export ORDER_FILE="k8s%2Forder-management%2Fdeployment.yaml"
     - export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"
-
     - export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"
     - export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"
-
     - echo "OrderManagement image: $ORDER_IMAGE"
     - echo "UserManagement image: $USER_IMAGE"
-
-    - |
-      curl --fail --silent --show-error \
-        --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-        "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE?ref=main" \
-        -o /tmp/order-response.json
-
-    - |
-      curl --fail --silent --show-error \
-        --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-        "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE?ref=main" \
-        -o /tmp/user-response.json
-
-    - |
-      cat /tmp/order-response.json \
-        | yq -r '.content' \
-        | base64 -d \
-        > /tmp/order-deployment.yaml
-
-    - |
-      cat /tmp/user-response.json \
-        | yq -r '.content' \
-        | base64 -d \
-        > /tmp/user-deployment.yaml
-
-    - |
-      yq -i \
-        '.spec.template.spec.containers[0].image = strenv(ORDER_IMAGE)' \
-        /tmp/order-deployment.yaml
-
-    - |
-      yq -i \
-        '.spec.template.spec.containers[0].image = strenv(USER_IMAGE)' \
-        /tmp/user-deployment.yaml
-
-    - echo "Updated OrderManagement deployment:"
-    - grep "image:" /tmp/order-deployment.yaml
-
-    - echo "Updated UserManagement deployment:"
-    - grep "image:" /tmp/user-deployment.yaml
-
-    - |
-      curl --fail --silent --show-error \
-        --request PUT \
-        --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-        --form "branch=main" \
-        --form "commit_message=ci: update OrderManagement image to $IMAGE_TAG [skip ci]" \
-        --form "content=< /tmp/order-deployment.yaml" \
-        "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE"
-
-    - |
-      curl --fail --silent --show-error \
-        --request PUT \
-        --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-        --form "branch=main" \
-        --form "commit_message=ci: update UserManagement image to $IMAGE_TAG [skip ci]" \
-        --form "content=< /tmp/user-deployment.yaml" \
-        "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE"
-
+    - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE?ref=main" -o /tmp/order-response.json'
+    - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE?ref=main" -o /tmp/user-response.json'
+    - 'cat /tmp/order-response.json | yq -r ".content" | base64 -d > /tmp/order-deployment.yaml'
+    - 'cat /tmp/user-response.json | yq -r ".content" | base64 -d > /tmp/user-deployment.yaml'
+    - 'yq -i ".spec.template.spec.containers[0].image = strenv(ORDER_IMAGE)" /tmp/order-deployment.yaml'
+    - 'yq -i ".spec.template.spec.containers[0].image = strenv(USER_IMAGE)" /tmp/user-deployment.yaml'
+    - 'grep "image:" /tmp/order-deployment.yaml'
+    - 'grep "image:" /tmp/user-deployment.yaml'
+    - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update OrderManagement image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/order-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE"'
+    - 'curl --fail --silent --show-error --request PUT --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" --form "branch=main" --form "commit_message=ci: update UserManagement image to $IMAGE_TAG [skip ci]" --form "content=< /tmp/user-deployment.yaml" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE"'
     - echo "Kubernetes manifests updated successfully."
 
   rules:
