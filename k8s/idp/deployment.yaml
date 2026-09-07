@@ -5,42 +5,34 @@ metadata:
   namespace: idp
 spec:
   replicas: 1
-
   selector:
     matchLabels:
       app: idp-api
-
   template:
     metadata:
       labels:
         app: idp-api
-
     spec:
       imagePullSecrets:
         - name: nexus-registry
-
       containers:
         - name: idp-api
-          image: nexuss.mahbod.com:8082/order-management/idp-api:latest
+          image: nexuss.mahbod.com:8082/order-management/idp-api:242a85c5
           imagePullPolicy: Always
-
           ports:
             - containerPort: 5000
-
           env:
             - name: ConnectionStrings__IDP
               valueFrom:
                 secretKeyRef:
                   name: idp-db-secret
                   key: ConnectionStrings__IDP
-
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
-
           livenessProbe:
             httpGet:
               path: /health
