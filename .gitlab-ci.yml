@@ -32,6 +32,24 @@ build_ordermanagement_api:
       when: on_success
 
 
+
+build_usermanagement_api:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+
+  script:
+    - dotnet --version
+    - dotnet restore src/UserManagement.API/UserManagement.API.csproj
+    - dotnet build src/UserManagement.API/UserManagement.API.csproj --no-restore --configuration Release
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+
+
+
 docker_build_push:
   stage: docker
   image: docker:27-cli
@@ -46,4 +64,22 @@ docker_build_push:
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+
+
+
+
+docker_build_push_usermanagement:
+  stage: docker
+  image: docker:27-cli
+
+  script:
+    - docker --version
+    - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
+    - docker build -f src/UserManagement.API/Dockerfile -t "$NEXUS_REGISTRY/order-management/usermanagement-api:$CI_COMMIT_SHORT_SHA" .
+    - docker push "$NEXUS_REGISTRY/order-management/usermanagement-api:$CI_COMMIT_SHORT_SHA"
+    - 'echo "Image pushed: ${NEXUS_REGISTRY}/order-management/usermanagement-api:${CI_COMMIT_SHORT_SHA}"'
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
       when: on_success
