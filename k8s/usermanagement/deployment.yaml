@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usermanagement-api
+  namespace: user-management
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: usermanagement-api
+
+  template:
+    metadata:
+      labels:
+        app: usermanagement-api
+
+    spec:
+      imagePullSecrets:
+        - name: nexus-registry
+
+      containers:
+        - name: usermanagement-api
+
+          image: nexuss.mahbod.com:8082/order-management/usermanagement-api:REPLACE_ME
+
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:5000"
+
+            - name: ConnectionStrings__UserManagement
+              valueFrom:
+                secretKeyRef:
+                  name: usermanagement-db-secret
+                  key: ConnectionStrings__UserManagement
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
