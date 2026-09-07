@@ -15,29 +15,24 @@ spec:
     spec:
       imagePullSecrets:
         - name: nexus-registry
-
       containers:
         - name: financial-api
-          image: nexuss.mahbod.com:8082/order-management/financial-api:latest
+          image: nexuss.mahbod.com:8082/order-management/financial-api:46f872bc
           imagePullPolicy: Always
-
           ports:
             - containerPort: 5000
-
           env:
             - name: ConnectionStrings__Financial
               valueFrom:
                 secretKeyRef:
                   name: financial-db-secret
                   key: ConnectionStrings__Financial
-
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
-
           livenessProbe:
             httpGet:
               path: /health
