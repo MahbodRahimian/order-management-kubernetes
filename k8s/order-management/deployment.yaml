@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: order-management-api
-          image: nexuss.mahbod.com:8082/order-management/order-management-api:cb2d11e9
+          image: nexuss.mahbod.com:8082/order-management/order-management-api:5b3297b2
           ports:
             - containerPort: 5000
               protocol: TCP
