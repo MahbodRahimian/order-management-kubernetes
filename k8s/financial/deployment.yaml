@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: financial-api
-          image: nexuss.mahbod.com:8082/order-management/financial-api:cb2d11e9
+          image: nexuss.mahbod.com:8082/order-management/financial-api:5b3297b2
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
