@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: usermanagement-api
-          image: nexuss.mahbod.com:8082/order-management/usermanagement-api:3bcb6c08
+          image: nexuss.mahbod.com:8082/order-management/usermanagement-api:9e77add5
           ports:
             - containerPort: 5000
               protocol: TCP
