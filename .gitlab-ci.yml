@@ -100,8 +100,8 @@ update_kubernetes_manifests:
     - export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"
     - export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"
     - export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"
-    - echo "OrderManagement image: $ORDER_IMAGE"
-    - echo "UserManagement image: $USER_IMAGE"
+    - 'echo "OrderManagement image: $ORDER_IMAGE"'
+    - 'echo "UserManagement image: $USER_IMAGE"'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$ORDER_FILE?ref=main" -o /tmp/order-response.json'
     - 'curl --fail --silent --show-error --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" "$GITLAB_API/projects/$PROJECT/repository/files/$USER_FILE?ref=main" -o /tmp/user-response.json'
     - 'cat /tmp/order-response.json | yq -r ".content" | base64 -d > /tmp/order-deployment.yaml'
