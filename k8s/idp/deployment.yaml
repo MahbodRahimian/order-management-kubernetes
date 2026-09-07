@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idp-api
+  namespace: idp
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: idp-api
+
+  template:
+    metadata:
+      labels:
+        app: idp-api
+
+    spec:
+      imagePullSecrets:
+        - name: nexus-registry
+
+      containers:
+        - name: idp-api
+          image: nexuss.mahbod.com:8082/order-management/idp-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: ConnectionStrings__IDP
+              valueFrom:
+                secretKeyRef:
+                  name: idp-db-secret
+                  key: ConnectionStrings__IDP
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 20
