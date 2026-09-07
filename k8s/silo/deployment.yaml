@@ -27,6 +27,13 @@ spec:
           ports:
             - containerPort: 5000
 
+          env:
+            - name: ConnectionStrings__Silo
+              valueFrom:
+                secretKeyRef:
+                  name: silo-db-secret
+                  key: ConnectionStrings__Silo
+
           readinessProbe:
             httpGet:
               path: /health
