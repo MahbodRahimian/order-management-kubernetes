@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: dispatcher-api
-          image: nexuss.mahbod.com:8082/order-management/dispatcher-api:989f47d6
+          image: nexuss.mahbod.com:8082/order-management/dispatcher-api:d56f5b7c
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
