@@ -1,4 +1,3 @@
-```yaml
 cache:
   key: "nuget-$CI_COMMIT_REF_SLUG"
   paths:
@@ -173,4 +172,3 @@ update_kubernetes_manifests:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
-```
