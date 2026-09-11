@@ -26,8 +26,6 @@ variables:
   DOTNET_NOLOGO: "true"
   NUGET_PACKAGES: "$CI_PROJECT_DIR/.nuget/packages"
 
-  NEXUS_REGISTRY: "$NEXUS_REGISTRY"
-
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
   ORDER_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/order-management-api"
@@ -47,14 +45,13 @@ variables:
   image: mcr.microsoft.com/dotnet/sdk:9.0
 
   script:
-    - dotnet --version
-    - dotnet restore "$PROJECT_FILE"
-    - dotnet build "$PROJECT_FILE" --no-restore --configuration Release
+    - 'dotnet --version'
+    - 'dotnet restore "$PROJECT_FILE"'
+    - 'dotnet build "$PROJECT_FILE" --no-restore --configuration Release'
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
-
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: on_success
 
@@ -68,12 +65,12 @@ variables:
   image: docker:27-cli
 
   script:
-    - docker --version
-    - docker info | grep -A10 -i "Insecure Registries"
-    - docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"
-    - docker build -f "$DOCKERFILE" -t "$IMAGE_NAME:$IMAGE_TAG" .
-    - docker push "$IMAGE_NAME:$IMAGE_TAG"
-    - echo "Image pushed: ${IMAGE_NAME}:${IMAGE_TAG}"
+    - 'docker --version'
+    - 'docker info | grep -A10 -i "Insecure Registries"'
+    - 'docker login "$NEXUS_REGISTRY" -u "$NEXUS_USERNAME" -p "$NEXUS_PASSWORD"'
+    - 'docker build -f "$DOCKERFILE" -t "$IMAGE_NAME:$IMAGE_TAG" .'
+    - 'docker push "$IMAGE_NAME:$IMAGE_TAG"'
+    - 'echo "Image pushed: ${IMAGE_NAME}:${IMAGE_TAG}"'
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -183,43 +180,53 @@ update_kubernetes_manifests:
     - docker_build_push_idp
 
   before_script:
-    - apk add --no-cache curl yq
-    - yq --version
+    - 'apk add --no-cache curl yq'
+    - 'yq --version'
 
   script:
     # --------------------------------------------------------
-    # GitLab API configuration
+    # GitLab API
     # --------------------------------------------------------
 
-    - export GITLAB_API="http://gitlab.mahbod.com:8080/api/v4"
-    - export PROJECT="mahbod1%2Forder-management"
-    - export BRANCH="main"
+    - 'export GITLAB_API="http://gitlab.mahbod.com:8080/api/v4"'
+    - 'export PROJECT="mahbod1%2Forder-management"'
+    - 'export BRANCH="main"'
 
     # --------------------------------------------------------
-    # Image references
+    # Encoded manifest paths
     # --------------------------------------------------------
 
-    - export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"
-    - export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"
-    - export FINANCIAL_IMAGE="${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"
-    - export SILO_IMAGE="${SILO_IMAGE_NAME}:${IMAGE_TAG}"
-    - export DISPATCHER_IMAGE="${DISPATCHER_IMAGE_NAME}:${IMAGE_TAG}"
-    - export IDP_IMAGE="${IDP_IMAGE_NAME}:${IMAGE_TAG}"
+    - 'export ORDER_FILE="k8s%2Forder-management%2Fdeployment.yaml"'
+    - 'export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"'
+    - 'export FINANCIAL_FILE="k8s%2Ffinancial%2Fdeployment.yaml"'
+    - 'export SILO_FILE="k8s%2Fsilo%2Fdeployment.yaml"'
+    - 'export DISPATCHER_FILE="k8s%2Fdispatcher%2Fdeployment.yaml"'
+    - 'export IDP_FILE="k8s%2Fidp%2Fdeployment.yaml"'
 
     # --------------------------------------------------------
-    # Show images that will be deployed
+    # Full image references
     # --------------------------------------------------------
 
-    - echo "OrderManagement image: $ORDER_IMAGE"
-    - echo "UserManagement image: $USER_IMAGE"
-    - echo "Financial image: $FINANCIAL_IMAGE"
-    - echo "Silo image: $SILO_IMAGE"
-    - echo "Dispatcher image: $DISPATCHER_IMAGE"
-    - echo "IDP image: $IDP_IMAGE"
+    - 'export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"'
+    - 'export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"'
+    - 'export FINANCIAL_IMAGE="${FINANCIAL_IMAGE_NAME}:${IMAGE_TAG}"'
+    - 'export SILO_IMAGE="${SILO_IMAGE_NAME}:${IMAGE_TAG}"'
+    - 'export DISPATCHER_IMAGE="${DISPATCHER_IMAGE_NAME}:${IMAGE_TAG}"'
+    - 'export IDP_IMAGE="${IDP_IMAGE_NAME}:${IMAGE_TAG}"'
 
     # --------------------------------------------------------
-    # Function:
-    # Get manifest -> Decode -> Update image -> Verify -> Commit
+    # Show images
+    # --------------------------------------------------------
+
+    - 'echo "OrderManagement image: $ORDER_IMAGE"'
+    - 'echo "UserManagement image: $USER_IMAGE"'
+    - 'echo "Financial image: $FINANCIAL_IMAGE"'
+    - 'echo "Silo image: $SILO_IMAGE"'
+    - 'echo "Dispatcher image: $DISPATCHER_IMAGE"'
+    - 'echo "IDP image: $IDP_IMAGE"'
+
+    # --------------------------------------------------------
+    # Function for updating a Kubernetes manifest
     # --------------------------------------------------------
 
     - |
@@ -228,69 +235,67 @@ update_kubernetes_manifests:
         local image="$2"
         local name="$3"
 
-        local encoded_file
-        local response_file
-        local manifest_file
-
-        encoded_file=$(printf '%s' "$file_path" | sed 's|/|%2F|g')
-
-        response_file="/tmp/${name}-response.json"
-        manifest_file="/tmp/${name}-deployment.yaml"
+        local response_file="/tmp/${name}-response.json"
+        local manifest_file="/tmp/${name}-deployment.yaml"
 
         echo "=============================================="
-        echo "Updating manifest: $file_path"
-        echo "Image: $image"
+        echo "Updating manifest: ${file_path}"
+        echo "Image: ${image}"
         echo "=============================================="
 
         echo "Downloading manifest from GitLab..."
 
         curl --fail --silent --show-error \
-          --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-          "$GITLAB_API/projects/$PROJECT/repository/files/$encoded_file?ref=$BRANCH" \
-          -o "$response_file"
+          --header "PRIVATE-TOKEN: ${CI_MANIFEST_TOKEN}" \
+          "${GITLAB_API}/projects/${PROJECT}/repository/files/${file_path}?ref=${BRANCH}" \
+          -o "${response_file}"
 
         echo "Decoding manifest..."
 
-        yq -r ".content" "$response_file" | base64 -d > "$manifest_file"
+        yq -r ".content" "${response_file}" | base64 -d > "${manifest_file}"
 
         echo "Updating image..."
 
-        IMAGE="$image" yq -i \
+        IMAGE="${image}" yq -i \
           '.spec.template.spec.containers[0].image = strenv(IMAGE)' \
-          "$manifest_file"
+          "${manifest_file}"
 
         echo "Verifying image..."
 
-        grep "image:" "$manifest_file"
+        grep "image:" "${manifest_file}"
 
         echo "Committing manifest..."
 
         curl --fail --silent --show-error \
           --request PUT \
-          --header "PRIVATE-TOKEN: $CI_MANIFEST_TOKEN" \
-          --form "branch=$BRANCH" \
+          --header "PRIVATE-TOKEN: ${CI_MANIFEST_TOKEN}" \
+          --form "branch=${BRANCH}" \
           --form "commit_message=ci: update ${name} image to ${IMAGE_TAG} [skip ci]" \
-          --form "content=<$manifest_file" \
-          "$GITLAB_API/projects/$PROJECT/repository/files/$encoded_file"
+          --form "content=<${manifest_file}" \
+          "${GITLAB_API}/projects/${PROJECT}/repository/files/${file_path}"
 
-        echo "Manifest updated successfully: $file_path"
+        echo "Manifest updated successfully: ${file_path}"
       }
 
     # --------------------------------------------------------
-    # Update all six services
+    # Update all manifests
     # --------------------------------------------------------
 
-    - update_manifest "k8s/order-management/deployment.yaml" "$ORDER_IMAGE" "order-management"
-    - update_manifest "k8s/usermanagement/deployment.yaml" "$USER_IMAGE" "usermanagement"
-    - update_manifest "k8s/financial/deployment.yaml" "$FINANCIAL_IMAGE" "financial"
-    - update_manifest "k8s/silo/deployment.yaml" "$SILO_IMAGE" "silo"
-    - update_manifest "k8s/dispatcher/deployment.yaml" "$DISPATCHER_IMAGE" "dispatcher"
-    - update_manifest "k8s/idp/deployment.yaml" "$IDP_IMAGE" "idp"
+    - 'update_manifest "$ORDER_FILE" "$ORDER_IMAGE" "order-management"'
+    - 'update_manifest "$USER_FILE" "$USER_IMAGE" "usermanagement"'
+    - 'update_manifest "$FINANCIAL_FILE" "$FINANCIAL_IMAGE" "financial"'
+    - 'update_manifest "$SILO_FILE" "$SILO_IMAGE" "silo"'
+    - 'update_manifest "$DISPATCHER_FILE" "$DISPATCHER_IMAGE" "dispatcher"'
+    - 'update_manifest "$IDP_FILE" "$IDP_IMAGE" "idp"'
 
-    - echo "=============================================="
-    - echo "All Kubernetes manifests updated successfully."
-    - echo "Image tag: $IMAGE_TAG"
-    - echo "=============================================="
+    # --------------------------------------------------------
+    # Final message
+    # --------------------------------------------------------
+
+    - 'echo "=============================================="'
+    - 'echo "All Kubernetes manifests updated successfully."'
+    - 'echo "Image tag: ${IMAGE_TAG}"'
+    - 'echo "=============================================="'
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
