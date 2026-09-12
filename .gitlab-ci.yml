@@ -1,25 +1,15 @@
-# ============================================================
-# Cache
-# ============================================================
-
 cache:
   key: "nuget-$CI_COMMIT_REF_SLUG"
   paths:
     - .nuget/packages/
 
 
-# ============================================================
-# Pipeline Stages
-# ============================================================
 
 stages:
   - build
   - docker
 
 
-# ============================================================
-# Global Variables
-# ============================================================
 
 variables:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -36,9 +26,7 @@ variables:
   IDP_IMAGE_NAME: "$NEXUS_REGISTRY/order-management/idp-api"
 
 
-# ============================================================
-# Build Template
-# ============================================================
+
 
 .build_template:
   stage: build
@@ -56,9 +44,7 @@ variables:
       when: on_success
 
 
-# ============================================================
-# Docker Build & Push Template
-# ============================================================
+
 
 .docker_template:
   stage: docker
@@ -77,9 +63,7 @@ variables:
       when: on_success
 
 
-# ============================================================
-# Build Jobs
-# ============================================================
+
 
 build_ordermanagement_api:
   extends: .build_template
@@ -117,9 +101,7 @@ build_idp_api:
     PROJECT_FILE: "src/IDP.API/IDP.API.csproj"
 
 
-# ============================================================
-# Docker Build & Push Jobs
-# ============================================================
+
 
 docker_build_push_ordermanagement:
   extends: .docker_template
@@ -163,9 +145,7 @@ docker_build_push_idp:
     DOCKERFILE: "src/IDP.API/Dockerfile"
 
 
-# ============================================================
-# Update Kubernetes Manifests
-# ============================================================
+
 
 update_kubernetes_manifests:
   stage: docker
@@ -184,17 +164,17 @@ update_kubernetes_manifests:
     - 'yq --version'
 
   script:
-    # --------------------------------------------------------
-    # GitLab API
-    # --------------------------------------------------------
+  
+    #Gitlab API
+    
 
     - 'export GITLAB_API="http://gitlab.mahbod.com:8080/api/v4"'
     - 'export PROJECT="mahbod1%2Forder-management"'
     - 'export BRANCH="main"'
 
-    # --------------------------------------------------------
-    # Encoded manifest paths
-    # --------------------------------------------------------
+    
+    #Encoded manifest paths
+    
 
     - 'export ORDER_FILE="k8s%2Forder-management%2Fdeployment.yaml"'
     - 'export USER_FILE="k8s%2Fusermanagement%2Fdeployment.yaml"'
@@ -203,9 +183,9 @@ update_kubernetes_manifests:
     - 'export DISPATCHER_FILE="k8s%2Fdispatcher%2Fdeployment.yaml"'
     - 'export IDP_FILE="k8s%2Fidp%2Fdeployment.yaml"'
 
-    # --------------------------------------------------------
-    # Full image references
-    # --------------------------------------------------------
+    
+    #full image reference
+  
 
     - 'export ORDER_IMAGE="${ORDER_IMAGE_NAME}:${IMAGE_TAG}"'
     - 'export USER_IMAGE="${USER_IMAGE_NAME}:${IMAGE_TAG}"'
@@ -214,9 +194,9 @@ update_kubernetes_manifests:
     - 'export DISPATCHER_IMAGE="${DISPATCHER_IMAGE_NAME}:${IMAGE_TAG}"'
     - 'export IDP_IMAGE="${IDP_IMAGE_NAME}:${IMAGE_TAG}"'
 
-    # --------------------------------------------------------
-    # Show images
-    # --------------------------------------------------------
+    
+    #show images
+    
 
     - 'echo "OrderManagement image: $ORDER_IMAGE"'
     - 'echo "UserManagement image: $USER_IMAGE"'
@@ -225,9 +205,9 @@ update_kubernetes_manifests:
     - 'echo "Dispatcher image: $DISPATCHER_IMAGE"'
     - 'echo "IDP image: $IDP_IMAGE"'
 
-    # --------------------------------------------------------
-    # Function for updating a Kubernetes manifest
-    # --------------------------------------------------------
+    
+    #Function for updating a Kubernetes manifest
+    
 
     - |
       update_manifest() {
@@ -277,9 +257,9 @@ update_kubernetes_manifests:
         echo "Manifest updated successfully: ${file_path}"
       }
 
-    # --------------------------------------------------------
-    # Update all manifests
-    # --------------------------------------------------------
+    
+    #Update all manifests
+    
 
     - 'update_manifest "$ORDER_FILE" "$ORDER_IMAGE" "order-management"'
     - 'update_manifest "$USER_FILE" "$USER_IMAGE" "usermanagement"'
@@ -288,9 +268,9 @@ update_kubernetes_manifests:
     - 'update_manifest "$DISPATCHER_FILE" "$DISPATCHER_IMAGE" "dispatcher"'
     - 'update_manifest "$IDP_FILE" "$IDP_IMAGE" "idp"'
 
-    # --------------------------------------------------------
-    # Final message
-    # --------------------------------------------------------
+    
+    #Final message
+    
 
     - 'echo "=============================================="'
     - 'echo "All Kubernetes manifests updated successfully."'
