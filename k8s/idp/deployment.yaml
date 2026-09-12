@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: idp-api
-          image: nexuss.mahbod.com:8082/order-management/idp-api:01c55c25
+          image: nexuss.mahbod.com:8082/order-management/idp-api:eec3d7e2
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
