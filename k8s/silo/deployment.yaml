@@ -17,7 +17,7 @@ spec:
         - name: nexus-registry
       containers:
         - name: silo-api
-          image: nexuss.mahbod.com:8082/order-management/silo-api:eec3d7e2
+          image: nexuss.mahbod.com:8082/order-management/silo-api:a37c3350
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
